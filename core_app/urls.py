@@ -1,13 +1,11 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from core_app import views
-
-router = DefaultRouter()
-router.register(r'tasks', views.TaskViewSet)
+from django.urls import path
+from .views import create_task, get_tasks, get_task, update_task, delete_task
 
 urlpatterns = [
-    path('api/', include(router.urls)),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path("tasks/", get_tasks, name="task-list"),
+    path("tasks/create/", create_task, name="create-task"),
+    path("tasks/<int:task_id>/", get_task, name="task-detail"),
+    path("tasks/<int:task_id>/update/", update_task, name="update-task"),
+    path("tasks/<int:task_id>/delete/", delete_task, name="delete-task"),
 ]
+
