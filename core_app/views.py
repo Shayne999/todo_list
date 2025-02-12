@@ -4,11 +4,15 @@ from django .http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
 from .models import Task
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 
 @csrf_exempt
+@api_view(['POST'])
 def register_user(request):
-    if request.method == 'POST':
         data = json.loads(request.body)
         username = data.get('username')
         password = data.get('password')
@@ -20,49 +24,52 @@ def register_user(request):
         return JsonResponse({"message": "User created"}, status=201)
 
 @csrf_exempt
+@api_view(['POST'])
 def login_user(request):
-    if request.method == 'POST':
         data = json.loads(request.body)
         username = data.get('username')
         password = data.get('password')
 
         user = authenticate(username=username, password=password)
         if user:
-            login(request, user)
-            return JsonResponse({"message": "Login successful"}, status=200)
-        else:
-            return JsonResponse({"error": "Invalid credentials"}, status=400)
+            refresh = RefreshToken.for_user(user)
+            return JsonResponse({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh)
+            }, status=200)
+        
+        return JsonResponse({"error": "Invalid credentials"}, status=400)
 
 
 @csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_task(request):
-    if request.method == 'POST' and request.user.is_authenticated:
         data = json.loads(request.body)
         title = data.get('title')
         description = data.get('description')
 
         task = Task.objects.create(user=request.user, title=title, description=description)
         return JsonResponse({'message': 'Task created successfully', 'task_id': task.id})
-
-    return JsonResponse({'error': 'Unauthorized'}, status=401)
     
 
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def list_tasks(request):
-    if request.user.is_authenticated:
         tasks = Task.objects.filter(user=request.user).values('id', 'title', 'description', 'completed')
         return JsonResponse(list(tasks), safe=False)
 
-    return JsonResponse({'error': 'Unauthorized'}, status=401)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_task(request, task_id):
     """
     Retrieves a specific task by ID.
     """
     try:
-        task = Task.objects.get(id=task_id)
+        task = Task.objects.get(id=task_id, user=request.user)
         return JsonResponse({
-            "task": task.task,
+            "task": task.title,
             "description": task.description,
             "completed": task.completed,
         })
@@ -70,12 +77,14 @@ def get_task(request, task_id):
         return JsonResponse({"error": "Task not found"}, status=404)
 
 @csrf_exempt
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def update_task(request, task_id):
     if request.method == 'PUT':
         data = json.loads(request.body)
         try:
-            task = Task.objects.get(id=task_id)
-            task.task = data.get("task", task.task)
+            task = Task.objects.get(id=task_id, user=request.user)
+            task.title = data.get("title", task.title)
             task.description = data.get("description", task.description)
             task.completed = data.get('completed', task.completed)
             task.save()
@@ -85,15 +94,17 @@ def update_task(request, task_id):
             return JsonResponse({"error": "Task not found"}, status=404)
         
 @csrf_exempt
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_task(request, task_id):
     if request.method == 'DELETE':
         try:
-            task = Task.objects.get(id=task_id)
+            task = Task.objects.get(id=task_id, user=request.user)
             task.delete()
             return JsonResponse({"message": "Task deleted"})
         except Task.DoesNotExist:
             return JsonResponse({"error": "Task not found"}, status=404)
-        
+
+@api_view(['POST'])        
 def user_logout(request):
-    logout(request)
     return JsonResponse({"message": "Logout successful"})
