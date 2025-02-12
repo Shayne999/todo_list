@@ -87,14 +87,27 @@ def create_task(request):
             title = data.get('title')
             description = data.get('description')
             due_date = data.get('due_date')
+            status = data.get('status', 'PENDING')
+
+            if status not in ['PENDING', 'IN_PROGRESS,', 'COMPLETED']:
+                 return JsonResponse(
+                      {"error": "Status should be PENDING, IN_PROGRESS or COMPLETED"},
+                      status=400)
 
             task = Task.objects.create(
                  user=request.user,
                  title=title,
                  description=description,
                  due_date=due_date,
+                 status=status
             )
-            return JsonResponse({'message': 'Task created successfully', 'task_id': task.id})
+            return JsonResponse({
+                 'message': 'Task created successfully',
+                 'task_id': task.id,
+                 'date_created': task.date_created,
+                 'due_date': task.due_date,
+                 'status': task.status
+            })
         except Exception as e:
             logger.error(f"Error creating task: {str(e)}")
             return create_error_response({"Error creating task"}, 500)
@@ -110,12 +123,14 @@ def list_tasks(request):
         try:
             if request.user.is_staff:
                 tasks = Task.objects.all().values(
-                     'id', 'title', 'description',
-                     'completed', 'due_date', 'user__username'
+                     'id', 'title', 'status',
+                     'status', 'date_created',
+                     'due_date', 'user__username' 
                      )
             else:
                 tasks = Task.objects.filter(user=request.user).values(
-                     'id', 'title', 'description', 'completed', 'due_date')
+                     'id', 'title', 'description', 'status',
+                     'date_created', 'due_date')
                 
             return JsonResponse(list(tasks), safe=False)
         except Exception as e:
@@ -134,7 +149,9 @@ def get_task(request, task_id):
         return JsonResponse({
             "task": task.title,
             "description": task.description,
-            "completed": task.completed,
+            "status": task.status,
+            "date_created": task.date_created,
+            "due_date": task.due_date
         })
     except Task.DoesNotExist:
         return JsonResponse({"error": "Task not found"}, status=404)
@@ -155,7 +172,13 @@ def update_task(request, task_id):
             task = Task.objects.get(id=task_id, user=request.user)
             task.title = data.get("title", task.title)
             task.description = data.get("description", task.description)
-            task.completed = data.get('completed', task.completed)
+            task.status = data.get('status', task.status)
+            task.due_date = data.get("due-date", task.due_date)
+
+            if task.status not in ['PENDING', 'IN_PROGRESS', 'COMPLETED']:
+                 return JsonResponse(
+                      {"error": "Status should be PENDING, IN_PROGRESS or COMPLETED"},
+                      status=400)
             task.save()
 
             return JsonResponse({"message": "Task updated"})
