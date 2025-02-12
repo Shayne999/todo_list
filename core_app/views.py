@@ -8,7 +8,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 import logging
-from django.shortcuts import get_object_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -87,8 +86,14 @@ def create_task(request):
             data = json.loads(request.body)
             title = data.get('title')
             description = data.get('description')
+            due_date = data.get('due_date')
 
-            task = Task.objects.create(user=request.user, title=title, description=description)
+            task = Task.objects.create(
+                 user=request.user,
+                 title=title,
+                 description=description,
+                 due_date=due_date,
+            )
             return JsonResponse({'message': 'Task created successfully', 'task_id': task.id})
         except Exception as e:
             logger.error(f"Error creating task: {str(e)}")
@@ -106,11 +111,11 @@ def list_tasks(request):
             if request.user.is_staff:
                 tasks = Task.objects.all().values(
                      'id', 'title', 'description',
-                     'completed', 'user__username'
+                     'completed', 'due_date', 'user__username'
                      )
             else:
                 tasks = Task.objects.filter(user=request.user).values(
-                     'id', 'title', 'description', 'completed')
+                     'id', 'title', 'description', 'completed', 'due_date')
                 
             return JsonResponse(list(tasks), safe=False)
         except Exception as e:
