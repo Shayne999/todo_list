@@ -5,7 +5,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from .models import Task
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 import logging
 
@@ -21,28 +21,28 @@ def create_error_response(message, status_code):
 
 @csrf_exempt
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #ensures only an admin can create another
+@permission_classes([AllowAny])
 def register_user(request):
         """
             Allows users to create accounts.
             Only admin users to create other admin accounts
         """
         try:
-            if not request.user.is_staff:
-                 return JsonResponse(
-                      {"error": "Only admins can create new users"},
-                      status=403
-                )
-            
             data = json.loads(request.body)
             username = data.get('username')
             password = data.get('password')
             is_admin = data.get('is_admin', False)
 
+            if is_admin and (not request.user.is_authenticated or not request.user.is_staff):
+                return JsonResponse({"error": "Only admin users can create admin accounts"},
+                                     status=403
+                )
+
             if User.objects.filter(username=username).exists():
                 return JsonResponse({"error": "Username already exists"}, status=400)
 
             user = User.objects.create_user(username=username, password=password)
+            
             if is_admin:
                  user.is_staff = True
                  user.save()
