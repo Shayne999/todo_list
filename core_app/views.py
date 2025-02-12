@@ -8,6 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 import logging
+from django.shortcuts import get_object_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -192,3 +193,24 @@ def user_logout(request):
     except Exception as e:
         logger.error(f"Error logging out user: {str(e)}")
         return create_error_response({"Error logging out user"}, 500)
+    
+
+@csrf_exempt
+@api_view(['Patch'])
+@permission_classes([IsAuthenticated])
+def mark_completed(request, task_id):
+    """
+    Marsks tasks as complete or incomplete
+    """
+    try:
+        task = Task.objects.get(id=task_id, user=request.user)
+        task.completed = True
+        task.save()
+        return JsonResponse({"message": "Task marked as complete", "title": task.title})
+
+    except Task.DoesNotExist:
+         return JsonResponse({"error": "Task not found"}, status=404)
+    
+    except Exception as e:
+         logger.error(f"Error marking task as complete: {str(e)}")
+         return JsonResponse({"Error marking task as complete"}, status=500)

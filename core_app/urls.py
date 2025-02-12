@@ -11,6 +11,7 @@ urlpatterns = [
     path("tasks/<int:task_id>/update/", update_task, name="update-task"),
     path("tasks/<int:task_id>/delete/", delete_task, name="delete-task"),
     path('logout/', user_logout, name='user-logout'),
+    path('tasks/<int:task_id>/complete/', mark_completed, name='mark_task_completed'),
 
     # JWT token endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
