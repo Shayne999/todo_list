@@ -13,11 +13,11 @@ This is a simple to do list built with Django. It allows users to create, update
 ### Prerequisites
 * python 3.11+
 * PostgreSQL
-* * IMPORTANT: This project is already connected to a remote PostgreSQL database so there is no need to set one up.
 
 1. Clone The repositody
 2. Install dependencies using the requirements.txt file
-3. Access Endpoints
+3. Set up a PostgreSQL database
+4. Access Endpoints
     ### Authentication
 
     | Endpoint     | Method | Description                      |
